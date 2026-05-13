@@ -43,7 +43,7 @@ export function LoginPage() {
     const { error } = await sendPasswordReset(email);
     setSubmitting(false);
     if (error) {
-      setError('Erro ao enviar e-mail. Verifique o endereço e tente novamente.');
+      setError(error.message ?? 'Erro ao enviar e-mail.');
     } else {
       setRecoverySent(true);
     }
