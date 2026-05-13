@@ -4,11 +4,13 @@ import { Navigate } from 'react-router-dom';
 import { useAuthContext } from '../contexts/AuthContext';
 
 export function LoginPage() {
-  const { session, loading, signIn } = useAuthContext();
+  const { session, loading, signIn, sendPasswordReset } = useAuthContext();
   const [email, setEmail]           = useState('');
   const [password, setPassword]     = useState('');
   const [error, setError]           = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [recovering, setRecovering] = useState(false);
+  const [recoverySent, setRecoverySent] = useState(false);
 
   if (loading) {
     return (
@@ -32,6 +34,19 @@ export function LoginPage() {
     const { error } = await signIn(email, password);
     if (error) setError('E-mail ou senha inválidos. Verifique suas credenciais.');
     setSubmitting(false);
+  }
+
+  async function handleRecovery(e: FormEvent) {
+    e.preventDefault();
+    setError(null);
+    setSubmitting(true);
+    const { error } = await sendPasswordReset(email);
+    setSubmitting(false);
+    if (error) {
+      setError('Erro ao enviar e-mail. Verifique o endereço e tente novamente.');
+    } else {
+      setRecoverySent(true);
+    }
   }
 
   return (
@@ -62,66 +77,131 @@ export function LoginPage() {
           {/* Divisor */}
           <div className="flex items-center gap-4 mb-10">
             <div className="flex-1 h-px bg-linen-200" />
-            <span className="font-sans text-xs tracking-ultra text-navy-300">ENTRAR</span>
+            <span className="font-sans text-xs tracking-ultra text-navy-300">
+              {recovering ? 'RECUPERAR ACESSO' : 'ENTRAR'}
+            </span>
             <div className="flex-1 h-px bg-linen-200" />
           </div>
 
-          {/* Formulário */}
-          <form onSubmit={handleSubmit} className="space-y-8">
-
-            <div className="space-y-1.5">
-              <label
-                htmlFor="email"
-                className="block font-sans text-xs tracking-ultra uppercase text-navy-500"
-              >
-                E-mail
-              </label>
-              <input
-                id="email"
-                type="email"
-                required
-                autoComplete="email"
-                value={email}
-                onChange={e => setEmail(e.target.value)}
-                placeholder="seu@email.com"
-                className="w-full bg-transparent border-b border-linen-200 focus:border-navy-900 py-3 font-sans text-sm text-navy-900 placeholder-navy-300 outline-none transition-colors duration-300"
-              />
-            </div>
-
-            <div className="space-y-1.5">
-              <label
-                htmlFor="password"
-                className="block font-sans text-xs tracking-ultra uppercase text-navy-500"
-              >
-                Senha
-              </label>
-              <input
-                id="password"
-                type="password"
-                required
-                autoComplete="current-password"
-                value={password}
-                onChange={e => setPassword(e.target.value)}
-                placeholder="••••••••"
-                className="w-full bg-transparent border-b border-linen-200 focus:border-navy-900 py-3 font-sans text-sm text-navy-900 placeholder-navy-300 outline-none transition-colors duration-300"
-              />
-            </div>
-
-            {error && (
-              <div className="bg-status-error-bg border border-status-error-edge rounded-input px-4 py-3">
-                <p className="font-sans text-xs text-status-error leading-relaxed">{error}</p>
+          {recoverySent ? (
+            <div className="space-y-6">
+              <div className="bg-status-success-bg border border-status-success rounded-input px-4 py-3">
+                <p className="font-sans text-xs text-status-success leading-relaxed">
+                  E-mail de recuperação enviado. Verifique sua caixa de entrada.
+                </p>
               </div>
-            )}
+              <button
+                onClick={() => { setRecovering(false); setRecoverySent(false); setError(null); }}
+                className="w-full bg-navy-900 hover:bg-navy-700 text-linen-50 font-sans text-xs font-700 tracking-ultra uppercase py-4 rounded-btn transition-colors duration-300"
+              >
+                Voltar ao login
+              </button>
+            </div>
+          ) : recovering ? (
+            <form onSubmit={handleRecovery} className="space-y-8">
+              <div className="space-y-1.5">
+                <label htmlFor="email-recovery" className="block font-sans text-xs tracking-ultra uppercase text-navy-500">
+                  E-mail
+                </label>
+                <input
+                  id="email-recovery"
+                  type="email"
+                  required
+                  autoComplete="email"
+                  value={email}
+                  onChange={e => setEmail(e.target.value)}
+                  placeholder="seu@email.com"
+                  className="w-full bg-transparent border-b border-linen-200 focus:border-navy-900 py-3 font-sans text-sm text-navy-900 placeholder-navy-300 outline-none transition-colors duration-300"
+                />
+              </div>
 
-            <button
-              type="submit"
-              disabled={submitting}
-              className="w-full bg-navy-900 hover:bg-navy-700 text-linen-50 font-sans text-xs font-700 tracking-ultra uppercase py-4 rounded-btn transition-colors duration-300 disabled:opacity-40 disabled:cursor-not-allowed mt-2"
-            >
-              {submitting ? 'Autenticando…' : 'Entrar'}
-            </button>
+              {error && (
+                <div className="bg-status-error-bg border border-status-error-edge rounded-input px-4 py-3">
+                  <p className="font-sans text-xs text-status-error leading-relaxed">{error}</p>
+                </div>
+              )}
 
-          </form>
+              <button
+                type="submit"
+                disabled={submitting}
+                className="w-full bg-navy-900 hover:bg-navy-700 text-linen-50 font-sans text-xs font-700 tracking-ultra uppercase py-4 rounded-btn transition-colors duration-300 disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                {submitting ? 'Enviando…' : 'Enviar link de recuperação'}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => { setRecovering(false); setError(null); }}
+                className="w-full text-navy-400 hover:text-navy-700 font-sans text-xs tracking-ultra uppercase py-2 transition-colors duration-300"
+              >
+                Voltar ao login
+              </button>
+            </form>
+          ) : (
+            <form onSubmit={handleSubmit} className="space-y-8">
+
+              <div className="space-y-1.5">
+                <label
+                  htmlFor="email"
+                  className="block font-sans text-xs tracking-ultra uppercase text-navy-500"
+                >
+                  E-mail
+                </label>
+                <input
+                  id="email"
+                  type="email"
+                  required
+                  autoComplete="email"
+                  value={email}
+                  onChange={e => setEmail(e.target.value)}
+                  placeholder="seu@email.com"
+                  className="w-full bg-transparent border-b border-linen-200 focus:border-navy-900 py-3 font-sans text-sm text-navy-900 placeholder-navy-300 outline-none transition-colors duration-300"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label
+                  htmlFor="password"
+                  className="block font-sans text-xs tracking-ultra uppercase text-navy-500"
+                >
+                  Senha
+                </label>
+                <input
+                  id="password"
+                  type="password"
+                  required
+                  autoComplete="current-password"
+                  value={password}
+                  onChange={e => setPassword(e.target.value)}
+                  placeholder="••••••••"
+                  className="w-full bg-transparent border-b border-linen-200 focus:border-navy-900 py-3 font-sans text-sm text-navy-900 placeholder-navy-300 outline-none transition-colors duration-300"
+                />
+              </div>
+
+              {error && (
+                <div className="bg-status-error-bg border border-status-error-edge rounded-input px-4 py-3">
+                  <p className="font-sans text-xs text-status-error leading-relaxed">{error}</p>
+                </div>
+              )}
+
+              <button
+                type="submit"
+                disabled={submitting}
+                className="w-full bg-navy-900 hover:bg-navy-700 text-linen-50 font-sans text-xs font-700 tracking-ultra uppercase py-4 rounded-btn transition-colors duration-300 disabled:opacity-40 disabled:cursor-not-allowed mt-2"
+              >
+                {submitting ? 'Autenticando…' : 'Entrar'}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => { setRecovering(true); setError(null); }}
+                className="w-full text-navy-400 hover:text-navy-700 font-sans text-xs tracking-ultra uppercase py-2 transition-colors duration-300"
+              >
+                Esqueci minha senha
+              </button>
+
+            </form>
+          )}
 
           {/* Rodapé */}
           <footer className="mt-12 flex items-center gap-3">
