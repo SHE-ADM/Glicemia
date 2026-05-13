@@ -1,0 +1,15 @@
+/* Mona Sans — variable font (covers weight 200–900, normal + italic) */
+@font-face {
+  font-family: 'Mona Sans';
+  src:
+    url('./assets/fonts/mona-sans/Mona-Sans.woff2') format('woff2 supports variations'),
+    url('./assets/fonts/mona-sans/Mona-Sans.woff2') format('woff2'),
+    url('./assets/fonts/mona-sans/Mona-Sans.ttf')   format('truetype');
+  font-weight: 200 900;
+  font-style: normal italic;
+  font-display: swap;
+}
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;

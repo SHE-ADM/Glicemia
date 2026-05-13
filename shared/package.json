@@ -1,0 +1,9 @@
+{
+  "name": "@glicemia/shared",
+  "version": "0.1.0",
+  "type": "module",
+  "main": "schemas/index.ts",
+  "dependencies": {
+    "zod": "^3.23.0"
+  }
+}
