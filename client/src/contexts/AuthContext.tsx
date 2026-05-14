@@ -36,9 +36,7 @@ async function fetchProfile(userId: string): Promise<Profile | null> {
 
 // Sem dependência de estado do componente — pode viver no escopo do módulo.
 async function sendPasswordReset(email: string): Promise<{ error: string | null }> {
-  const { error } = await supabase.auth.resetPasswordForEmail(email, {
-    redirectTo: `${globalThis.location.origin}/reset-password`,
-  });
+  const { error } = await supabase.auth.resetPasswordForEmail(email);
   return { error: error?.message ?? null };
 }
 
