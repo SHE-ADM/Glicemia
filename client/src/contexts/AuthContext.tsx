@@ -36,8 +36,18 @@ async function fetchProfile(userId: string): Promise<Profile | null> {
 
 // Sem dependência de estado do componente — pode viver no escopo do módulo.
 async function sendPasswordReset(email: string): Promise<{ error: string | null }> {
-  const { error } = await supabase.auth.resetPasswordForEmail(email);
-  return { error: error?.message ?? null };
+  // Limpa sessão local antes do reset para evitar token stale/corrompido
+  // no header Authorization que causa TypeError no fetch do Chrome.
+  await supabase.auth.signOut({ scope: 'local' }).catch(() => {});
+
+  try {
+    const { error } = await supabase.auth.resetPasswordForEmail(email);
+    return { error: error?.message ?? null };
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : 'Erro ao processar a requisição.';
+    console.error('[sendPasswordReset] fetch threw:', err);
+    return { error: msg };
+  }
 }
 
 export function AuthProvider({ children }: Readonly<{ children: ReactNode }>) {
