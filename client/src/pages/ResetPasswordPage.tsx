@@ -3,8 +3,16 @@ import type { FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthContext } from '../contexts/AuthContext';
 
+function mapUpdateError(error: string): string {
+  if (/same.password|different from the old/i.test(error))
+    return 'A nova senha deve ser diferente da senha atual.';
+  if (/tempo limite/i.test(error))
+    return error;
+  return 'Erro ao redefinir senha. Solicite um novo link e tente novamente.';
+}
+
 export function ResetPasswordPage() {
-  const { updatePassword } = useAuthContext();
+  const { updatePassword, signOut, isPasswordRecovery, loading } = useAuthContext();
   const navigate = useNavigate();
   const [password, setPassword]   = useState('');
   const [confirm, setConfirm]     = useState('');
@@ -26,14 +34,55 @@ export function ResetPasswordPage() {
     }
 
     setSubmitting(true);
-    const { error } = await updatePassword(password);
-    setSubmitting(false);
-
-    if (error) {
-      setError('Erro ao redefinir senha. Tente novamente.');
-    } else {
-      setSuccess(true);
+    try {
+      const { error } = await updatePassword(password);
+      if (error) {
+        setError(mapUpdateError(error));
+      } else {
+        setSuccess(true);
+      }
+    } catch {
+      setError('Erro inesperado. Tente novamente.');
+    } finally {
+      setSubmitting(false);
     }
+  }
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-linen flex items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-6 h-6 rounded-full border border-navy-500 border-t-transparent animate-spin" />
+          <p className="font-sans text-xs tracking-ultra uppercase text-navy-300">
+            Verificando link de recuperação
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!success && !isPasswordRecovery && !submitting) {
+    return (
+      <div className="min-h-screen bg-gradient-linen flex items-center justify-center px-4 py-16">
+        <div className="w-full max-w-md bg-linen-50 rounded-card shadow-float-lg overflow-hidden">
+          <div className="h-1 bg-gold-500" />
+          <div className="px-12 pt-12 pb-14 space-y-6">
+            <p className="font-sans text-xs font-700 tracking-ultra uppercase text-navy-300">Medidor de Glicemia</p>
+            <div className="bg-status-error-bg border border-status-error-edge rounded-input px-4 py-3">
+              <p className="font-sans text-xs text-status-error leading-relaxed">
+                Link de recuperação inválido ou expirado. Solicite um novo link na tela de login.
+              </p>
+            </div>
+            <button
+              onClick={() => navigate('/login', { replace: true })}
+              className="w-full bg-navy-900 hover:bg-navy-700 text-linen-50 font-sans text-xs font-700 tracking-ultra uppercase py-4 rounded-btn transition-colors duration-300"
+            >
+              Voltar ao login
+            </button>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -60,10 +109,10 @@ export function ResetPasswordPage() {
                 </p>
               </div>
               <button
-                onClick={() => navigate('/', { replace: true })}
+                onClick={async () => { await signOut(); navigate('/login', { replace: true }); }}
                 className="w-full bg-navy-900 hover:bg-navy-700 text-linen-50 font-sans text-xs font-700 tracking-ultra uppercase py-4 rounded-btn transition-colors duration-300"
               >
-                Ir para o dashboard
+                Ir para o login
               </button>
             </div>
           ) : (
