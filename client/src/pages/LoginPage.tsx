@@ -1,7 +1,20 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import type { FormEvent } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuthContext } from '../contexts/AuthContext';
+
+function mapRecoveryError(error: string): string {
+  if (/after \d+ seconds/i.test(error) || /over_email_send_rate_limit/i.test(error)) {
+    return 'Aguarde alguns segundos antes de tentar novamente.';
+  }
+  return 'Erro ao enviar e-mail. Verifique o endereço e tente novamente.';
+}
+
+function recoveryButtonLabel(submitting: boolean, cooldown: number): string {
+  if (submitting) return 'Enviando…';
+  if (cooldown > 0) return `Aguarde ${cooldown}s`;
+  return 'Enviar link de recuperação';
+}
 
 export function LoginPage() {
   const { session, loading, signIn, sendPasswordReset } = useAuthContext();
@@ -11,6 +24,12 @@ export function LoginPage() {
   const [submitting, setSubmitting] = useState(false);
   const [recovering, setRecovering] = useState(false);
   const [recoverySent, setRecoverySent] = useState(false);
+  const [cooldownSeconds, setCooldownSeconds] = useState(0);
+  const cooldownRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  useEffect(() => {
+    return () => { if (cooldownRef.current) clearInterval(cooldownRef.current); };
+  }, []);
 
   if (loading) {
     return (
@@ -36,6 +55,17 @@ export function LoginPage() {
     setSubmitting(false);
   }
 
+  function startCooldown(seconds: number) {
+    if (cooldownRef.current) clearInterval(cooldownRef.current);
+    setCooldownSeconds(seconds);
+    cooldownRef.current = setInterval(() => {
+      setCooldownSeconds(prev => {
+        if (prev <= 1) { clearInterval(cooldownRef.current!); cooldownRef.current = null; return 0; }
+        return prev - 1;
+      });
+    }, 1000);
+  }
+
   async function handleRecovery(e: FormEvent) {
     e.preventDefault();
     setError(null);
@@ -43,9 +73,11 @@ export function LoginPage() {
     const { error } = await sendPasswordReset(email);
     setSubmitting(false);
     if (error) {
-      setError(error.message ?? 'Erro ao enviar e-mail.');
+      setError(mapRecoveryError(error));
+      startCooldown(15);
     } else {
       setRecoverySent(true);
+      startCooldown(60);
     }
   }
 
@@ -123,10 +155,10 @@ export function LoginPage() {
 
               <button
                 type="submit"
-                disabled={submitting}
+                disabled={submitting || cooldownSeconds > 0}
                 className="w-full bg-navy-900 hover:bg-navy-700 text-linen-50 font-sans text-xs font-700 tracking-ultra uppercase py-4 rounded-btn transition-colors duration-300 disabled:opacity-40 disabled:cursor-not-allowed"
               >
-                {submitting ? 'Enviando…' : 'Enviar link de recuperação'}
+                {recoveryButtonLabel(submitting, cooldownSeconds)}
               </button>
 
               <button
