@@ -25,8 +25,7 @@ async function fetchProfile(userId: string): Promise<Profile | null> {
       .eq('id', userId)
       .is('deleted_at', null)
       .single()
-      .then(({ data }) => data ?? null)
-      .catch(() => null);
+      .then(({ data, error }) => (error ? null : (data ?? null)));
 
     const timeout = new Promise<null>(resolve => setTimeout(() => resolve(null), 5_000));
     return await Promise.race([query, timeout]);
