@@ -7,7 +7,7 @@ function mapRecoveryError(error: string): string {
   if (/after \d+ seconds/i.test(error) || /over_email_send_rate_limit/i.test(error)) {
     return 'Aguarde alguns segundos antes de tentar novamente.';
   }
-  return 'Erro ao enviar e-mail. Verifique o endereço e tente novamente.';
+  return `Erro ao enviar e-mail: ${error}`;
 }
 
 function recoveryButtonLabel(submitting: boolean, cooldown: number): string {
@@ -73,6 +73,7 @@ export function LoginPage() {
     const { error } = await sendPasswordReset(email);
     setSubmitting(false);
     if (error) {
+      console.error('[sendPasswordReset] Supabase error:', error);
       setError(mapRecoveryError(error));
       startCooldown(15);
     } else {
